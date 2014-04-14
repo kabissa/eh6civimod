@@ -1,0 +1,60 @@
+<?php
+/*----------------------------------------------------------------
+ * Function for customized form validation
+ *----------------------------------------------------------------*/
+function eh6civimod_civicrm_buildForm($formName, &$form) {
+    /*
+     * form for Event Registration
+     */
+    if ($formName == "CRM_Event_Form_Registration_Register") {
+        /*
+         * only if event type = Africa Roundtable
+         */
+        $values = $form->getVar('_values');
+        $eventTypeID = $values['event']['event_type_id'];
+        if ($eventTypeID == 7) {
+            /*
+             * retrieve the currently logged in user from the session. If the
+             * session has not been instantiated yet, do so
+             */
+            if (!isset($session)) {
+                $session = & CRM_Core_Session::singleton();
+            }
+            $currentUserID = $session->get('userID');
+            /*
+             * use the API (entity Contact, action Get) to retrieve data of
+             * logged in user. This will contain 'current_employer', set as 
+             * default for affiliated organization (custom_33). Also set
+             * first name and last name
+             */
+            require_once 'api/api.php';
+            $apiParms = array(
+                'version'               =>  3,
+                'check_permissions'	=>  false,
+                'contact_id'		=>  $currentUserID);
+            $apiResults = civicrm_api("Contact", "get", $apiParms);
+            if (isset($apiResults['values'][$currentUserID]['current_employer'])) {
+                $defaults = array('custom_2' => $apiResults['values'][$currentUserID]['current_employer']);
+                $form->setDefaults($defaults);
+            }
+            /*
+             * making sure the first and last name can only be entered
+             * if not already known for the logged in user
+             */
+            $defaultValues = $form->getVar('_defaultValues');
+            if (!empty( $defaultValues['first_name'])) {
+                $form->freeze('first_name');
+            }
+            if (!empty($defaultValues['last_name'])) {
+                $form->freeze('last_name');
+            }
+        }
+    }
+}
+
+
+
+  
+  
+ 
+	   

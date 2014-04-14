@@ -1,0 +1,7 @@
+name = Speeltuin 6 Maatwerk CiviCRM
+description = Maatwerk CiviCRM voor de speeltuin met Drupal 6
+dependencies[] = civicrm
+package = CiviCRM
+core = 6.x
+version = 3.2
+
