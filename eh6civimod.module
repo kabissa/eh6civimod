@@ -1,60 +1,87 @@
 <?php
+define('KABISSA_PASSIVE_GROUP_ID', 135);
+define('KABISSA_DIRECTORY_GID', 3);
 /*----------------------------------------------------------------
  * Function for customized form validation
  *----------------------------------------------------------------*/
 function eh6civimod_civicrm_buildForm($formName, &$form) {
+  /*
+   * form for Event Registration
+   */
+  if ($formName == "CRM_Event_Form_Registration_Register") {
     /*
-     * form for Event Registration
+     * only if event type = Africa Roundtable
      */
-    if ($formName == "CRM_Event_Form_Registration_Register") {
-        /*
-         * only if event type = Africa Roundtable
-         */
-        $values = $form->getVar('_values');
-        $eventTypeID = $values['event']['event_type_id'];
-        if ($eventTypeID == 7) {
-            /*
-             * retrieve the currently logged in user from the session. If the
-             * session has not been instantiated yet, do so
-             */
-            if (!isset($session)) {
-                $session = & CRM_Core_Session::singleton();
-            }
-            $currentUserID = $session->get('userID');
-            /*
-             * use the API (entity Contact, action Get) to retrieve data of
-             * logged in user. This will contain 'current_employer', set as 
-             * default for affiliated organization (custom_33). Also set
-             * first name and last name
-             */
-            require_once 'api/api.php';
-            $apiParms = array(
-                'version'               =>  3,
-                'check_permissions'	=>  false,
-                'contact_id'		=>  $currentUserID);
-            $apiResults = civicrm_api("Contact", "get", $apiParms);
-            if (isset($apiResults['values'][$currentUserID]['current_employer'])) {
-                $defaults = array('custom_2' => $apiResults['values'][$currentUserID]['current_employer']);
-                $form->setDefaults($defaults);
-            }
-            /*
-             * making sure the first and last name can only be entered
-             * if not already known for the logged in user
-             */
-            $defaultValues = $form->getVar('_defaultValues');
-            if (!empty( $defaultValues['first_name'])) {
-                $form->freeze('first_name');
-            }
-            if (!empty($defaultValues['last_name'])) {
-                $form->freeze('last_name');
-            }
-        }
+    $values = $form->getVar('_values');
+    $eventTypeID = $values['event']['event_type_id'];
+    if ($eventTypeID == 7) {
+      /*
+       * retrieve the currently logged in user from the session. If the
+       * session has not been instantiated yet, do so
+       */
+      if (!isset($session)) {
+        $session = & CRM_Core_Session::singleton();
+      }
+      $currentUserID = $session->get('userID');
+      /*
+       * use the API (entity Contact, action Get) to retrieve data of
+       * logged in user. This will contain 'current_employer', set as 
+       * default for affiliated organization (custom_33). Also set
+       * first name and last name
+       */
+      require_once 'api/api.php';
+      $apiParms = array(
+        'version'               =>  3,
+        'check_permissions'	=>  false,
+        'contact_id'		=>  $currentUserID);
+      $apiResults = civicrm_api("Contact", "get", $apiParms);
+      if (isset($apiResults['values'][$currentUserID]['current_employer'])) {
+        $defaults = array('custom_2' => $apiResults['values'][$currentUserID]['current_employer']);
+        $form->setDefaults($defaults);
+      }
+      /*
+       * making sure the first and last name can only be entered
+       * if not already known for the logged in user
+       */
+      $defaultValues = $form->getVar('_defaultValues');
+      if (!empty( $defaultValues['first_name'])) {
+        $form->freeze('first_name');
+      }
+      if (!empty($defaultValues['last_name'])) {
+        $form->freeze('last_name');
+      }
     }
+  }
 }
-
-
-
-  
-  
- 
-	   
+function eh6civimod_civicrm_pageRun(&$page) {
+  $pageName = $page->getVar('_name');
+  /*
+   * only if pagename is the profile dynamic page
+   */
+  if ($pageName == 'CRM_Profile_Page_Dynamic') {
+    $gid = $page->getVar('_gid');
+    /*
+     * only if profile id is the correct one for the organization directory
+     */
+    if ($gid == KABISSA_DIRECTORY_GID) {
+      /*
+       * retrieve groups of contact with API and check if org is in passive group
+       */
+      $contactId = $page->getVar('_id');
+      $groups = civicrm_api('GroupContact', 'Get', array('version' => 3, 'contact_id' => $contactId));
+      foreach ($groups['values'] as $group) {
+        if ($group['group_id'] == KABISSA_PASSIVE_GROUP_ID) {
+          /*
+           * if contact is in passive orgs group, show message
+           */
+          $session = CRM_Core_Session::singleton();
+          $session->setStatus('We have not heard from this organization for a while and '
+            . 'therefore are not sure if the data shown here is correct. If this '
+            . 'organization is your organization, please contact the Kabissa team on '
+            . '<a href="mailto:community@kabissa.org">community@kabissa.org</a> to '
+            . 'tell use you are still active');          
+        }
+      }
+    }
+  }
+}
